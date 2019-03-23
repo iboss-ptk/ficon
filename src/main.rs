@@ -14,6 +14,7 @@ use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
 use termion::{color, style};
+use std::ffi::OsStr;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "ficon")]
@@ -26,11 +27,60 @@ struct Opt {
 #[derive(Deserialize)]
 struct Config {
     default: SubConfig,
+    extension: Option<Vec<SubConfigWithExtension>>,
 }
 
 #[derive(Deserialize)]
 struct SubConfig {
     format: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct SubConfigWithExtension {
+    extension: String,
+    format: String,
+}
+
+
+impl Config {
+    fn check(&self, path: &PathBuf) -> bool {
+        let extensions = &self.extension;
+
+        let vec =vec![];
+        let extensions = extensions
+            .as_ref()
+            .map_or(&vec, |e| e);
+
+        let matched: Vec<&SubConfigWithExtension> = extensions
+            .iter()
+            .filter(|e| {
+                e.extension == path.extension().unwrap_or(OsStr::new("")).to_str().unwrap_or("")
+            })
+            .collect();
+
+        let format = matched
+            .first()
+            .map(|e| e.format.clone())
+            .unwrap_or(self.default.format.clone());
+
+        let pattern = match format.as_str() {
+            "kebab" => Regex::new(r"^[a-z][a-z\-]*[a-z]$").unwrap(),
+            "snake" => Regex::new(r"^[a-z][a-z_]*[a-z]$").unwrap(),
+            "upper_snake" => Regex::new(r"^[A-Z][A-Z_]*$").unwrap(),
+            "camel" => Regex::new(r"^[a-z][A-Za-z]*$").unwrap(),
+            "pascal" => Regex::new(r"^[A-Z][A-Za-z]*$").unwrap(),
+            // TODO:
+            // underscore_pre
+            // underscore_post
+            // underscore_surround
+            _ => panic!("case not found {}", format),
+        };
+
+        pattern.is_match(path
+            .file_stem()
+            .expect("file stem is missing")
+            .to_str().expect("can't cast file stem to string"))
+    }
 }
 
 fn main() {
@@ -47,19 +97,6 @@ fn main() {
 
     let config: Config = toml::from_str(config.as_str()).unwrap();
 
-    let pattern = match config.default.format.as_str() {
-        "kebab" => Regex::new(r"^[a-z][a-z\-]*[a-z]$").unwrap(),
-        "snake" => Regex::new(r"^[a-z][a-z_]*[a-z]$").unwrap(),
-        "upper_snake" => Regex::new(r"^[A-Z][A-Z_]*$").unwrap(),
-        "camel" => Regex::new(r"^[a-z][A-Za-z]*$").unwrap(),
-        "pascal" => Regex::new(r"^[A-Z][A-Za-z]*$").unwrap(),
-        // TODO:
-        // underscore_pre
-        // underscore_post
-        // underscore_surround
-        _ => panic!("case not found {}", config.default.format),
-    };
-
     let mut ok = true;
 
     for result in Walk::new(opt.path).skip(1) {
@@ -69,13 +106,7 @@ fn main() {
             .canonicalize()
             .expect("can't create canonical path");
 
-        if pattern.is_match(
-            canonical_path
-                .file_stem()
-                .expect("file stem")
-                .to_str()
-                .expect("file stem to str"),
-        ) {
+        if config.check(&entry.clone().into_path()) {
             println!(
                 "{green}{path}{reset}",
                 path = format!(

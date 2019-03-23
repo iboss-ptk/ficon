@@ -7,3 +7,8 @@ edition = "2018"
 [dependencies]
 structopt = "0.2"
 termion = "1.5"
+walkdir = "2"
+glob = "0.3"
+ignore = "0.4"
+regex = "1.1"
+exitcode = "1.1.2"

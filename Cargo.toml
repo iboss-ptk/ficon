@@ -1,0 +1,9 @@
+[package]
+name = "ficon"
+version = "0.1.0"
+authors = ["Supanat Pothivarakorn <supanat.ptk@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+structopt = "0.2"
+termion = "1.5"

@@ -54,7 +54,7 @@ impl Ficon {
         }?;
 
         let config = fs::read_to_string(&config_path)
-            .with_context(|_| format!("can't read file from the path specified: {}", config_path.as_str()))?;
+            .with_context(|_| format!("Config file is missing: {}", config_path.as_str()))?;
 
         let config: Config = toml::from_str(config.as_str())
             .with_context(|_| "Error while parsing configuration file")?;
@@ -66,24 +66,23 @@ impl Ficon {
         return self.option.path.as_ref();
     }
 
-    pub fn check(&self, path: &Path) -> bool {
-        let convention = self.config.convention_for(path);
+    pub fn check(&self, path: &Path) -> Result<bool, ExitFailure> {
+        let convention_str = self.config.convention_for(path);
         let reg_pattern = Regex::new(r"/(.*)/").unwrap();
 
-        let convention = match convention.as_str() {
-            "any" => Regex::new(r".*").unwrap(),
-            "kebab" => Regex::new(r"^[a-z][a-z\-\d]*[a-z\d]$").unwrap(),
-            "snake" => Regex::new(r"^[a-z][a-z_\d]*[a-z\d]$").unwrap(),
-            "upper_snake" => Regex::new(r"^[A-Z][A-Z_\d]*$").unwrap(),
-            "camel" => Regex::new(r"^[a-z][A-Za-z\d]*$").unwrap(),
-            "pascal" => Regex::new(r"^[A-Z][A-Za-z\d]*$").unwrap(),
-            convention => {
-                if reg_pattern.is_match(convention) {
-                    let pattern = reg_pattern.replace(convention, "$1").to_string();
-                    Regex::new(pattern.as_str()).unwrap()
-                } else {
-                    panic!("can not parse convention: {}", convention);
-                }
+        let convention_regex = match convention_str.as_str() {
+            "any" => Ficon::convention_from_regex(r".*"),
+            "kebab" => Ficon::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
+            "snake" => Ficon::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
+            "upper_snake" => Ficon::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
+            "camel" => Ficon::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
+            "pascal" => Ficon::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
+            convention => if reg_pattern.is_match(convention_str.as_str()) {
+                let convention = reg_pattern.replace(convention, "$1").to_string();
+                Regex::new(convention.as_str())
+                    .with_context(|_| format!("{} is not a valid regexp", convention))
+            } else {
+                Err(Context::new(format!("convention is not predefined or defined as regexp: {}", convention)))
             }
         };
 
@@ -97,7 +96,15 @@ impl Ficon {
         // TODO: make this configurable
         let file_name = file_name.split(".").next().unwrap_or("");
 
-        convention.is_match(file_name)
+        let convention = convention_regex
+            .with_context(|_| "fail to parse convention")?;
+
+        Ok(convention.is_match(file_name))
+    }
+
+    fn convention_from_regex(pattern: &str) -> Result<Regex, Context<String>> {
+        Regex::new(pattern)
+            .with_context(|_| format!("Invalid convention definition: {}", pattern))
     }
 }
 

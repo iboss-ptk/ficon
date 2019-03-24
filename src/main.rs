@@ -25,7 +25,7 @@ fn main() -> Result<(), ExitFailure> {
 
         let path = entry.path();
 
-        let is_passed = ficon.check(path);
+        let is_passed = ficon.check(path)?;
         if !is_passed {
             ok = false;
         }

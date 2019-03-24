@@ -91,3 +91,7 @@ convention = "/^__[a-z]+__$/"
 This will match path like `./test/app/__mock__` for example.
 
 Note that `//` is required in order to use regex as convention.
+
+The convention constraint only checks against file name or directory name, disregrading any extension,
+for example, `src/lib/app.rs`, `ficon` only check if `app` matches the constraint.
+If the file has multiple extension eg. `test/main/app.spec.ts`, again `ficon` will only check `app`.

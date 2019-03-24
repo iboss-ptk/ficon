@@ -78,7 +78,7 @@ There are 6 predefined convention, namely
 * `snake` : snake_case
 * `upper_snake` : UPPER_SNAKE_CASE
 * `pascal` : PascalCase
-* `camel` : CamelCase
+* `camel` : camelCase
 
 But if you want to define your own convention, you can do so by using regex:
 

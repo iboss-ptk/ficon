@@ -73,7 +73,7 @@ The higher `[[for_pattern]]` position, the higher precedence it is, this behavio
 ## Convention
 
 There are 6 predefined convention, namely
-* `any` : no contraint
+* `any` : no constraint
 * `kebab` : kebab-case
 * `snake` : snake_case
 * `upper_snake` : UPPER_SNAKE_CASE

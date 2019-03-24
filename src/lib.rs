@@ -8,6 +8,8 @@ use regex::Regex;
 use std::fs;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
+use exitfailure::ExitFailure;
+use failure::{ResultExt, Context};
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "ficon")]
@@ -42,21 +44,22 @@ pub struct Ficon {
 impl Ficon {
     const DEFAULT_CONFIG_FILE: &'static str = "Ficon.toml";
 
-    pub fn new() -> Ficon {
+    pub fn new() -> Result<Ficon, ExitFailure> {
         let option: CliOption = CliOption::from_args();
 
         let config_path = if option.path.is_dir() {
-            format!("{}/{}", option.path.display(), Ficon::DEFAULT_CONFIG_FILE)
+            Ok(format!("{}/{}", option.path.display(), Ficon::DEFAULT_CONFIG_FILE))
         } else {
-            panic!("path specified is not a directory")
-        };
+            Err(Context::new(format!("\"{}\" is not a directory", option.path.display())))
+        }?;
 
         let config = fs::read_to_string(&config_path)
-            .expect(format!("can't read file from the path specified: {}", config_path).as_str());
+            .with_context(|_| format!("can't read file from the path specified: {}", config_path.as_str()))?;
 
-        let config: Config = toml::from_str(config.as_str()).unwrap();
+        let config: Config = toml::from_str(config.as_str())
+            .with_context(|_| "Error while parsing configuration file")?;
 
-        return Ficon { option, config };
+        Ok(Ficon { option, config })
     }
 
     pub fn target_dir(&self) -> &Path {

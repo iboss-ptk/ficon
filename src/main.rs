@@ -15,12 +15,13 @@ use termion::{color, style};
 fn main() -> Result<(), ExitFailure> {
     setup_panic!();
 
-    let ficon = Ficon::new();
+    let ficon = Ficon::new()?;
     let mut ok = true;
 
     // skip first entry since it's the root dir and we only care about content inside
     for result in Walk::new(ficon.target_dir()).skip(1) {
-        let entry = result.with_context(|_| format!("can't retrieve directory entry"))?;
+        let entry = result
+            .with_context(|_| format!("can't retrieve directory entry"))?;
 
         let path = entry.path();
 

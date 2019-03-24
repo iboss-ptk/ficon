@@ -7,6 +7,7 @@ extern crate toml;
 use ficon::Ficon;
 use ignore::Walk;
 use termion::{color, style};
+use std::path::Path;
 
 fn main() {
     let ficon = Ficon::new();
@@ -14,39 +15,43 @@ fn main() {
 
     for result in Walk::new(ficon.target_dir()).skip(1) {
         let entry = result.unwrap();
-        let canonical_path = entry
-            .path()
-            .canonicalize()
-            .expect("can't create canonical path");
+        let path = entry.path();
 
-        if ficon.check(&entry.clone().into_path()) {
-            println!(
-                "{green}{path}{reset}",
-                path = format!(
-                    "{}✓ {}",
-                    " ".repeat(entry.depth()),
-                    canonical_path.file_name().unwrap().to_str().unwrap()
-                ),
-                green = color::Fg(color::LightGreen),
-                reset = style::Reset
-            );
-        } else {
-            println!(
-                "{bold}{red}{path}{reset}",
-                path = format!(
-                    "{}✘ {}",
-                    "  ".repeat(entry.depth()),
-                    canonical_path.file_name().unwrap().to_str().unwrap()
-                ),
-                red = color::Fg(color::LightRed),
-                bold = style::Bold,
-                reset = style::Reset
-            );
+        let is_passed = ficon.check(path);
+        if !is_passed {
             ok = false;
-        };
+        }
+
+        print_check_result(path, entry.depth(), is_passed);
     }
 
     if !ok {
         std::process::exit(exitcode::DATAERR)
     }
+}
+
+fn print_check_result(path: &Path, depth: usize, is_passed: bool) {
+    let depth_space = "  ".repeat(depth);
+    let file_name = path
+        .file_name()
+        .expect("filename doesn't exist")
+        .to_str()
+        .expect("filename can't be casted to string");
+
+    if is_passed {
+        println!(
+            "{green}{path}{reset}",
+            path = format!( "{}✓ {}", depth_space, file_name ),
+            green = color::Fg(color::LightGreen),
+            reset = style::Reset
+        );
+    } else {
+        println!(
+            "{bold}{red}{path}{reset}",
+            path = format!( "{}✘ {}", depth_space, file_name ),
+            red = color::Fg(color::LightRed),
+            bold = style::Bold,
+            reset = style::Reset
+        );
+    };
 }

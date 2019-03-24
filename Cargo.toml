@@ -5,6 +5,8 @@ authors = ["Supanat Pothivarakorn <supanat.ptk@gmail.com>"]
 edition = "2018"
 homepage = "https://github.com/iboss-ptk/ficon"
 repository = "https://github.com/iboss-ptk/ficon"
+description = "File and folder convention checker written in rust "
+license = "MIT"
 
 [dependencies]
 structopt = "0.2"

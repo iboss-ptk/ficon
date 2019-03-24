@@ -1,0 +1,7 @@
+[default]
+convention = "snake"
+
+[[extension]]
+extension = "md"
+convention = "upper_snake"
+

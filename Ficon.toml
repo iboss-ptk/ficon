@@ -14,6 +14,9 @@ pattern = "./LICENSE"
 convention = "upper_snake"
 
 [[for_patterns]]
-pattern = "./Cargo.lock"
+pattern = "./Cargo.*"
 convention = "pascal"
 
+[[for_patterns]]
+pattern = "./Dockerfile*"
+convention = "pascal"

@@ -13,6 +13,7 @@ fn main() {
     let ficon = Ficon::new();
     let mut ok = true;
 
+    // skip first entry since it's the root dir and we only care about content inside
     for result in Walk::new(ficon.target_dir()).skip(1) {
         let entry = result.unwrap();
         let path = entry.path();

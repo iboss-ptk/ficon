@@ -41,11 +41,13 @@ pub struct Ficon {
 }
 
 impl Ficon {
+    const DEFAULT_CONFIG_FILE: &'static str = "Ficon.toml";
+
     pub fn new() -> Ficon {
         let option: CliOption = CliOption::from_args();
 
         let config_path = if option.path.is_dir() {
-            format!("{}/{}", option.path.display(), "ficon.toml")
+            format!("{}/{}", option.path.display(), Ficon::DEFAULT_CONFIG_FILE)
         } else {
             panic!("path specified is not a directory")
         };

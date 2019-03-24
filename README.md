@@ -11,6 +11,15 @@ The distribution is now available on [crates.io](https://crates.io/). You can in
 $ cargo install ficon
 ```
 
+Or you can run through docker
+
+```
+$ docker run -v "$PWD":/usr/src/app ibosz/ficon
+```
+
+It will pull the ficon image from [dockerhub](https://hub.docker.com/r/ibosz/ficon)
+and mount your current working directory to docker container to run `ficon`.
+
 More options are coming. Contributions are welcome :)
 
 ## Usage

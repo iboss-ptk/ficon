@@ -3,13 +3,13 @@ extern crate serde_derive;
 extern crate regex;
 extern crate structopt;
 
+use exitfailure::ExitFailure;
+use failure::{Context, ResultExt};
 use glob::Pattern;
 use regex::Regex;
 use std::fs;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
-use exitfailure::ExitFailure;
-use failure::{ResultExt, Context};
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "ficon")]
@@ -48,9 +48,16 @@ impl Ficon {
         let option: CliOption = CliOption::from_args();
 
         let config_path = if option.path.is_dir() {
-            Ok(format!("{}/{}", option.path.display(), Ficon::DEFAULT_CONFIG_FILE))
+            Ok(format!(
+                "{}/{}",
+                option.path.display(),
+                Ficon::DEFAULT_CONFIG_FILE
+            ))
         } else {
-            Err(Context::new(format!("\"{}\" is not a directory", option.path.display())))
+            Err(Context::new(format!(
+                "\"{}\" is not a directory",
+                option.path.display()
+            )))
         }?;
 
         let config = fs::read_to_string(&config_path)
@@ -77,12 +84,17 @@ impl Ficon {
             "upper_snake" => Ficon::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
             "camel" => Ficon::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
             "pascal" => Ficon::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
-            convention => if reg_pattern.is_match(convention_str.as_str()) {
-                let convention = reg_pattern.replace(convention, "$1").to_string();
-                Regex::new(convention.as_str())
-                    .with_context(|_| format!("{} is not a valid regexp", convention))
-            } else {
-                Err(Context::new(format!("convention is not predefined or defined as regexp: {}", convention)))
+            convention => {
+                if reg_pattern.is_match(convention_str.as_str()) {
+                    let convention = reg_pattern.replace(convention, "$1").to_string();
+                    Regex::new(convention.as_str())
+                        .with_context(|_| format!("{} is not a valid regexp", convention))
+                } else {
+                    Err(Context::new(format!(
+                        "convention is not predefined or defined as regexp: {}",
+                        convention
+                    )))
+                }
             }
         };
 
@@ -96,15 +108,13 @@ impl Ficon {
         // TODO: make this configurable
         let file_name = file_name.split(".").next().unwrap_or("");
 
-        let convention = convention_regex
-            .with_context(|_| "fail to parse convention")?;
+        let convention = convention_regex.with_context(|_| "fail to parse convention")?;
 
         Ok(convention.is_match(file_name))
     }
 
     fn convention_from_regex(pattern: &str) -> Result<Regex, Context<String>> {
-        Regex::new(pattern)
-            .with_context(|_| format!("Invalid convention definition: {}", pattern))
+        Regex::new(pattern).with_context(|_| format!("Invalid convention definition: {}", pattern))
     }
 }
 

@@ -1,6 +1,8 @@
 # ficon
 File and folder convention checker written in rust
 
+[![asciicast](https://asciinema.org/a/rHTVDEyIvLPfC1DjlgeKnuCgM.svg)](https://asciinema.org/a/rHTVDEyIvLPfC1DjlgeKnuCgM)
+
 ## Install
 
 The distribution is now available on [crates.io](https://crates.io/). You can install via `cargo`.

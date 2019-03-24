@@ -68,6 +68,7 @@ impl Ficon {
         let reg_pattern = Regex::new(r"/(.*)/").unwrap();
 
         let convention = match convention.as_str() {
+            "any" => Regex::new(r".*").unwrap(),
             "kebab" => Regex::new(r"^[a-z][a-z\-\d]*[a-z\d]$").unwrap(),
             "snake" => Regex::new(r"^[a-z][a-z_\d]*[a-z\d]$").unwrap(),
             "upper_snake" => Regex::new(r"^[A-Z][A-Z_\d]*$").unwrap(),

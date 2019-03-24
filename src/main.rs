@@ -6,8 +6,8 @@ extern crate toml;
 
 use ficon::Ficon;
 use ignore::Walk;
-use termion::{color, style};
 use std::path::Path;
+use termion::{color, style};
 
 fn main() {
     let ficon = Ficon::new();
@@ -42,14 +42,14 @@ fn print_check_result(path: &Path, depth: usize, is_passed: bool) {
     if is_passed {
         println!(
             "{green}{path}{reset}",
-            path = format!( "{}✓ {}", depth_space, file_name ),
+            path = format!("{}✓ {}", depth_space, file_name),
             green = color::Fg(color::LightGreen),
             reset = style::Reset
         );
     } else {
         println!(
             "{bold}{red}{path}{reset}",
-            path = format!( "{}✘ {}", depth_space, file_name ),
+            path = format!("{}✘ {}", depth_space, file_name),
             red = color::Fg(color::LightRed),
             bold = style::Bold,
             reset = style::Reset

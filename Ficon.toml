@@ -1,11 +1,19 @@
 [default]
 convention = "snake"
 
-[[extension]]
-extension = "toml"
+[[for_patterns]]
+pattern = "*.toml"
 convention = "pascal"
 
-[[extension]]
-extension = "md"
+[[for_patterns]]
+pattern = "*.md"
 convention = "upper_snake"
+
+[[for_patterns]]
+pattern = "./LICENSE"
+convention = "upper_snake"
+
+[[for_patterns]]
+pattern = "./Cargo.lock"
+convention = "pascal"
 

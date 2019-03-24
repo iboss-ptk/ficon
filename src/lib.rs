@@ -3,10 +3,9 @@ extern crate serde_derive;
 extern crate regex;
 extern crate structopt;
 
-use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
-
+use glob::Pattern;
 use regex::Regex;
 use structopt::StructOpt;
 
@@ -21,7 +20,7 @@ pub struct CliOption {
 #[derive(Deserialize)]
 pub struct Config {
     default: SubConfig,
-    extension: Option<Vec<SubConfigWithExtension>>,
+    for_patterns: Option<Vec<SubConfigByPattern>>,
 }
 
 #[derive(Deserialize)]
@@ -30,8 +29,8 @@ struct SubConfig {
 }
 
 #[derive(Deserialize, Debug)]
-struct SubConfigWithExtension {
-    extension: String,
+struct SubConfigByPattern {
+    pattern: String,
     convention: String,
 }
 
@@ -91,20 +90,20 @@ impl Ficon {
 
 impl Config {
     fn convention_for(&self, path: &Path) -> String {
-        let extensions = &self.extension;
+        let pattern_configs = &self.for_patterns;
 
         let empty_vec = vec![];
-        let extensions = extensions.as_ref().map_or(&empty_vec, |e| e);
+        let pattern_configs = pattern_configs
+            .as_ref()
+            .map_or(&empty_vec, |e| e);
 
-        let matched_formats: Vec<&SubConfigWithExtension> = extensions
+        let matched_formats: Vec<&SubConfigByPattern> = pattern_configs
             .iter()
-            .filter(|e| {
-                e.extension
-                    == path
-                        .extension()
-                        .unwrap_or(OsStr::new(""))
-                        .to_str()
-                        .unwrap_or("")
+            .filter(|conf| {
+                let pattern = Pattern::new(conf.pattern.as_str())
+                    .expect("invalid glob pattern");
+
+                pattern.matches_path(path)
             })
             .collect();
 

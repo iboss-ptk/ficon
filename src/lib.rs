@@ -3,10 +3,10 @@ extern crate serde_derive;
 extern crate regex;
 extern crate structopt;
 
-use std::fs;
-use std::path::{Path, PathBuf};
 use glob::Pattern;
 use regex::Regex;
+use std::fs;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -65,21 +65,25 @@ impl Ficon {
 
     pub fn check(&self, path: &Path) -> bool {
         let convention = self.config.convention_for(path);
+        let reg_pattern = Regex::new(r"/(.*)/").unwrap();
 
-        let pattern = match convention.as_str() {
-            "kebab" => Regex::new(r"^[a-z][a-z\-]*[a-z]$").unwrap(),
-            "snake" => Regex::new(r"^[a-z][a-z_]*[a-z]$").unwrap(),
-            "upper_snake" => Regex::new(r"^[A-Z][A-Z_]*$").unwrap(),
-            "camel" => Regex::new(r"^[a-z][A-Za-z]*$").unwrap(),
-            "pascal" => Regex::new(r"^[A-Z][A-Za-z]*$").unwrap(),
-            // TODO:
-            // underscore_pre
-            // underscore_post
-            // underscore_surround
-            _ => panic!("case not found {}", convention),
+        let convention = match convention.as_str() {
+            "kebab" => Regex::new(r"^[a-z][a-z\-\d]*[a-z\d]$").unwrap(),
+            "snake" => Regex::new(r"^[a-z][a-z_\d]*[a-z\d]$").unwrap(),
+            "upper_snake" => Regex::new(r"^[A-Z][A-Z_\d]*$").unwrap(),
+            "camel" => Regex::new(r"^[a-z][A-Za-z\d]*$").unwrap(),
+            "pascal" => Regex::new(r"^[A-Z][A-Za-z\d]*$").unwrap(),
+            convention => {
+                if reg_pattern.is_match(convention) {
+                    let pattern = reg_pattern.replace(convention, "$1").to_string();
+                    Regex::new(pattern.as_str()).unwrap()
+                } else {
+                    panic!("can not parse convention: {}", convention);
+                }
+            }
         };
 
-        pattern.is_match(
+        convention.is_match(
             path.file_stem()
                 .expect("file stem is missing")
                 .to_str()
@@ -93,15 +97,12 @@ impl Config {
         let pattern_configs = &self.for_patterns;
 
         let empty_vec = vec![];
-        let pattern_configs = pattern_configs
-            .as_ref()
-            .map_or(&empty_vec, |e| e);
+        let pattern_configs = pattern_configs.as_ref().map_or(&empty_vec, |e| e);
 
         let matched_formats: Vec<&SubConfigByPattern> = pattern_configs
             .iter()
             .filter(|conf| {
-                let pattern = Pattern::new(conf.pattern.as_str())
-                    .expect("invalid glob pattern");
+                let pattern = Pattern::new(conf.pattern.as_str()).expect("invalid glob pattern");
 
                 pattern.matches_path(path)
             })

@@ -8,14 +8,21 @@ use ficon::Ficon;
 use ignore::Walk;
 use std::path::Path;
 use termion::{color, style};
+use failure::ResultExt;
+use exitfailure::ExitFailure;
+use human_panic::setup_panic;
 
-fn main() {
+fn main() -> Result<(), ExitFailure> {
+    setup_panic!();
+
     let ficon = Ficon::new();
     let mut ok = true;
 
     // skip first entry since it's the root dir and we only care about content inside
     for result in Walk::new(ficon.target_dir()).skip(1) {
-        let entry = result.unwrap();
+        let entry = result
+            .with_context(|_| format!("can't retrieve directory entry"))?;
+
         let path = entry.path();
 
         let is_passed = ficon.check(path);
@@ -29,6 +36,8 @@ fn main() {
     if !ok {
         std::process::exit(exitcode::DATAERR)
     }
+
+    Ok(())
 }
 
 fn print_check_result(path: &Path, depth: usize, is_passed: bool) {

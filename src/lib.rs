@@ -83,12 +83,17 @@ impl Ficon {
             }
         };
 
-        convention.is_match(
-            path.file_stem()
-                .expect("file stem is missing")
-                .to_str()
-                .expect("can't cast file stem to string"),
-        )
+        let file_name = path
+            .file_stem()
+            .expect("file stem is missing")
+            .to_str()
+            .expect("can't cast file stem to string");
+
+        // ignore multiple extension by default
+        // TODO: make this configurable
+        let file_name = file_name.split(".").next().unwrap_or("");
+
+        convention.is_match(file_name)
     }
 }
 

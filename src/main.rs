@@ -4,13 +4,13 @@ extern crate serde;
 extern crate termion;
 extern crate toml;
 
+use exitfailure::ExitFailure;
+use failure::ResultExt;
 use ficon::Ficon;
+use human_panic::setup_panic;
 use ignore::Walk;
 use std::path::Path;
 use termion::{color, style};
-use failure::ResultExt;
-use exitfailure::ExitFailure;
-use human_panic::setup_panic;
 
 fn main() -> Result<(), ExitFailure> {
     setup_panic!();
@@ -20,8 +20,7 @@ fn main() -> Result<(), ExitFailure> {
 
     // skip first entry since it's the root dir and we only care about content inside
     for result in Walk::new(ficon.target_dir()).skip(1) {
-        let entry = result
-            .with_context(|_| format!("can't retrieve directory entry"))?;
+        let entry = result.with_context(|_| format!("can't retrieve directory entry"))?;
 
         let path = entry.path();
 

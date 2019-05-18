@@ -1,4 +1,4 @@
-# ficon
+# Ficon [![Build Status](https://travis-ci.com/iboss-ptk/ficon.svg?branch=master)](https://travis-ci.com/iboss-ptk/ficon)
 File and folder convention checker written in rust
 
 [![asciicast](https://asciinema.org/a/rHTVDEyIvLPfC1DjlgeKnuCgM.svg)](https://asciinema.org/a/rHTVDEyIvLPfC1DjlgeKnuCgM)

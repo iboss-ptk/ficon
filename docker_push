@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "building docker image..."
+
+docker build -t ibosz/ficon .
+
+echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+docker push ibosz/ficon

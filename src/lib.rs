@@ -61,9 +61,9 @@ impl Ficon {
         }?;
 
         let config = fs::read_to_string(&config_path)
-            .with_context(|_| format!("Config file is missing: {}", config_path.as_str()))?;
+            .with_context(|_| format!("Config file is missing: {}", &config_path))?;
 
-        let config: Config = toml::from_str(config.as_str())
+        let config: Config = toml::from_str(&config)
             .with_context(|_| "Error while parsing configuration file")?;
 
         Ok(Ficon { option, config })

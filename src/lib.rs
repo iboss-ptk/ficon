@@ -44,14 +44,14 @@ pub struct Ficon {
 impl Ficon {
     const DEFAULT_CONFIG_FILE: &'static str = "Ficon.toml";
 
-    pub fn new() -> Result<Ficon, ExitFailure> {
+    pub fn new() -> Result<Self, ExitFailure> {
         let option: CliOption = CliOption::from_args();
 
         let config_path = if option.path.is_dir() {
             Ok(format!(
                 "{}/{}",
                 option.path.display(),
-                Ficon::DEFAULT_CONFIG_FILE
+                Self::DEFAULT_CONFIG_FILE
             ))
         } else {
             Err(Context::new(format!(
@@ -60,44 +60,20 @@ impl Ficon {
             )))
         }?;
 
-        let config = fs::read_to_string(&config_path)
+        let config_str = fs::read_to_string(&config_path)
             .with_context(|_| format!("Config file is missing: {}", &config_path))?;
 
-        let config: Config = toml::from_str(&config)
+        let config: Config = toml::from_str(&config_str)
             .with_context(|_| "Error while parsing configuration file")?;
 
-        Ok(Ficon { option, config })
+        Ok(Self { option, config })
     }
 
     pub fn target_dir(&self) -> &Path {
-        return self.option.path.as_ref();
+        return &self.option.path;
     }
 
     pub fn check(&self, path: &Path) -> Result<bool, ExitFailure> {
-        let convention_str = self.config.convention_for(path);
-        let reg_pattern = Regex::new(r"/(.*)/").unwrap();
-
-        let convention_regex = match convention_str.as_str() {
-            "any" => Ficon::convention_from_regex(r".*"),
-            "kebab" => Ficon::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
-            "snake" => Ficon::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
-            "upper_snake" => Ficon::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
-            "camel" => Ficon::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
-            "pascal" => Ficon::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
-            convention => {
-                if reg_pattern.is_match(convention_str.as_str()) {
-                    let convention = reg_pattern.replace(convention, "$1").to_string();
-                    Regex::new(convention.as_str())
-                        .with_context(|_| format!("{} is not a valid regexp", convention))
-                } else {
-                    Err(Context::new(format!(
-                        "convention is not predefined or defined as regexp: {}",
-                        convention
-                    )))
-                }
-            }
-        };
-
         let file_name = path
             .file_stem()
             .expect("file stem is missing")
@@ -108,7 +84,28 @@ impl Ficon {
         // TODO: make this configurable
         let file_name = file_name.split(".").next().unwrap_or("");
 
-        let convention = convention_regex.with_context(|_| "fail to parse convention")?;
+        let reg_pattern = Regex::new(r"/(.*)/").unwrap();
+
+        let convention = match self.config.convention_for(path) {
+            "any" => Self::convention_from_regex(r".*"),
+            "kebab" => Self::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
+            "snake" => Self::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
+            "upper_snake" => Self::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
+            "camel" => Self::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
+            "pascal" => Self::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
+            convention_str => {
+                if reg_pattern.is_match(convention_str) {
+                    let convention = reg_pattern.replace(convention_str, "$1");
+                    Regex::new(&convention)
+                        .with_context(|_| format!("{} is not a valid regexp", convention))
+                } else {
+                    Err(Context::new(format!(
+                        "convention is not predefined or defined as regexp: {}",
+                        convention_str
+                    )))
+                }
+            }
+        }?;
 
         Ok(convention.is_match(file_name))
     }
@@ -119,24 +116,21 @@ impl Ficon {
 }
 
 impl Config {
-    fn convention_for(&self, path: &Path) -> String {
-        let pattern_configs = &self.for_patterns;
+    fn convention_for(&self, path: &Path) -> &str {
+        self.for_patterns
+            .as_ref()
+            .map_or(self.default.convention.as_str(), |configs| {
+                configs
+                    .iter()
+                    .filter(|conf| {
+                        let pattern = Pattern::new(&conf.pattern).expect("invalid glob pattern");
 
-        let empty_vec = vec![];
-        let pattern_configs = pattern_configs.as_ref().map_or(&empty_vec, |e| e);
-
-        let matched_formats: Vec<&SubConfigByPattern> = pattern_configs
-            .iter()
-            .filter(|conf| {
-                let pattern = Pattern::new(conf.pattern.as_str()).expect("invalid glob pattern");
-
-                pattern.matches_path(path)
+                        pattern.matches_path(path)
+                    })
+                    .collect::<Vec<_>>()
+                    .first()
+                    .map(|e| e.convention.as_str())
+                    .unwrap_or(self.default.convention.as_str())
             })
-            .collect();
-
-        return matched_formats
-            .first()
-            .map(|e| e.convention.clone())
-            .unwrap_or(self.default.convention.clone());
     }
 }

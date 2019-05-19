@@ -14,7 +14,7 @@ $ cargo install ficon
 Or you can run through docker
 
 ```
-$ docker run -v "$PWD":/usr/src/app ibosz/ficon
+$ docker run -v "$PWD":/app ibosz/ficon
 ```
 
 It will pull the ficon image from [dockerhub](https://hub.docker.com/r/ibosz/ficon)

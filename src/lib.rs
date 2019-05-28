@@ -56,6 +56,13 @@ struct ValidatedConfig {
     patterns: Vec<ValidatedSubConfig>,
 }
 
+pub fn filename_of(path: &Path) -> &str {
+    path.file_stem()
+        .expect("file stem is missing")
+        .to_str()
+        .expect("can't cast file stem to string")
+}
+
 impl Ficon {
     const DEFAULT_CONFIG_FILE: &'static str = "Ficon.toml";
 
@@ -99,11 +106,7 @@ impl Ficon {
 
     pub fn check(&mut self, path: &Path) -> Result<bool, Error> {
         let convention_regex = self.validated_config.convention_for(path)?;
-        let file_name = path
-            .file_stem()
-            .expect("file stem is missing")
-            .to_str()
-            .expect("can't cast file stem to string")
+        let file_name = filename_of(path)
             // ignore multiple extension by default
             // TODO: make this configurable
             .split('.')

@@ -6,7 +6,7 @@ extern crate toml;
 
 use exitfailure::ExitFailure;
 use failure::ResultExt;
-use ficon::Ficon;
+use ficon::{filename_of, Ficon};
 use human_panic::setup_panic;
 use ignore::Walk;
 use std::{io, path::Path};
@@ -45,11 +45,7 @@ fn print_check_result(
     is_passed: bool,
 ) -> Result<(), io::Error> {
     let depth_space = "  ".repeat(depth);
-    let file_name = path
-        .file_name()
-        .expect("filename doesn't exist")
-        .to_str()
-        .expect("filename can't be casted to string");
+    let file_name = filename_of(path);
 
     if is_passed {
         writeln!(

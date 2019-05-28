@@ -149,20 +149,20 @@ impl TryFrom<Config> for ValidatedConfig {
 }
 
 impl ValidatedConfig {
-    fn new_regex(pattern: &str) -> Result<Regex, Error> {
-        Regex::new(pattern)
-            .with_context(|_| format!("Invalid convention definition: {}", pattern))
-            .map_err(Into::into)
-    }
-
     fn new_regex_for_convention(convention: &str) -> Result<Regex, Error> {
+        fn new_regex(pattern: &str) -> Result<Regex, Error> {
+            Regex::new(pattern)
+                .with_context(|_| format!("Invalid convention definition: {}", pattern))
+                .map_err(Into::into)
+        }
+
         match convention {
-            "any" => Self::new_regex(r".*"),
-            "kebab" => Self::new_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
-            "snake" => Self::new_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
-            "upper_snake" => Self::new_regex(r"^[A-Z][A-Z_\d]*$"),
-            "camel" => Self::new_regex(r"^[a-z][A-Za-z\d]*$"),
-            "pascal" => Self::new_regex(r"^[A-Z][A-Za-z\d]*$"),
+            "any" => new_regex(r".*"),
+            "kebab" => new_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
+            "snake" => new_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
+            "upper_snake" => new_regex(r"^[A-Z][A-Z_\d]*$"),
+            "camel" => new_regex(r"^[a-z][A-Za-z\d]*$"),
+            "pascal" => new_regex(r"^[A-Z][A-Za-z\d]*$"),
             convention => {
                 if REGEX_PATTERN.is_match(convention) {
                     let convention = REGEX_PATTERN.replace(convention, "$1");

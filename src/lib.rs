@@ -98,7 +98,7 @@ impl Ficon {
         let convention_str = self.validated_config.convention_for(path);
         let reg_pattern = Regex::new(r"/(.*)/").unwrap();
 
-        let convention_regex = match convention_str.as_str() {
+        let convention_regex = match convention_str {
             "any" => Ficon::convention_from_regex(r".*"),
             "kebab" => Ficon::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
             "snake" => Ficon::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
@@ -106,7 +106,7 @@ impl Ficon {
             "camel" => Ficon::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
             "pascal" => Ficon::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
             convention => {
-                if reg_pattern.is_match(convention_str.as_str()) {
+                if reg_pattern.is_match(convention_str) {
                     let convention = reg_pattern.replace(convention, "$1").to_string();
                     Regex::new(convention.as_str())
                         .with_context(|_| format!("{} is not a valid regexp", convention))
@@ -164,12 +164,12 @@ impl TryFrom<Config> for ValidatedConfig {
 }
 
 impl ValidatedConfig {
-    fn convention_for(&self, path: &Path) -> String {
+    fn convention_for(&self, path: &Path) -> &str {
         self.for_patterns
             .iter()
             .filter(|p| p.pattern.matches_path(path))
             .next()
-            .map(|p| p.convention.clone())
-            .unwrap_or_else(|| self.default_convention.clone())
+            .map(|p| &p.convention)
+            .unwrap_or_else(|| &self.default_convention)
     }
 }

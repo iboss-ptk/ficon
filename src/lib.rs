@@ -63,8 +63,8 @@ impl Ficon {
         let config = fs::read_to_string(&config_path)
             .with_context(|_| format!("Config file is missing: {}", &config_path))?;
 
-        let config: Config = toml::from_str(&config)
-            .with_context(|_| "Error while parsing configuration file")?;
+        let config: Config =
+            toml::from_str(&config).with_context(|_| "Error while parsing configuration file")?;
 
         Ok(Ficon { option, config })
     }
@@ -120,23 +120,18 @@ impl Ficon {
 
 impl Config {
     fn convention_for(&self, path: &Path) -> String {
-        let pattern_configs = &self.for_patterns;
-
-        let empty_vec = vec![];
-        let pattern_configs = pattern_configs.as_ref().map_or(&empty_vec, |e| e);
-
-        let matched_formats: Vec<&SubConfigByPattern> = pattern_configs
-            .iter()
-            .filter(|conf| {
-                let pattern = Pattern::new(conf.pattern.as_str()).expect("invalid glob pattern");
-
-                pattern.matches_path(path)
-            })
-            .collect();
-
-        return matched_formats
-            .first()
-            .map(|e| e.convention.clone())
-            .unwrap_or(self.default.convention.clone());
+        match self.for_patterns.as_ref() {
+            Some(pattern_configs) => pattern_configs
+                .iter()
+                .filter(|conf| {
+                    Pattern::new(conf.pattern.as_str())
+                        .expect("invalid glob pattern")
+                        .matches_path(path)
+                })
+                .next()
+                .map(|e| e.convention.clone())
+                .unwrap_or(self.default.convention.clone()),
+            None => self.default.convention.clone(),
+        }
     }
 }

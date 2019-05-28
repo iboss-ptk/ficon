@@ -21,14 +21,10 @@ fn main() -> Result<(), ExitFailure> {
     // skip first entry since it's the root dir and we only care about content inside
     for result in Walk::new(ficon.target_dir()).skip(1) {
         let entry = result.with_context(|_| format!("can't retrieve directory entry"))?;
-
         let path = entry.path();
 
         let is_passed = ficon.check(path)?;
-        if !is_passed {
-            ok = false;
-        }
-
+        ok = ok && is_passed;
         print_check_result(path, entry.depth(), is_passed);
     }
 

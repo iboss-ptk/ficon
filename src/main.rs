@@ -9,7 +9,6 @@ use failure::ResultExt;
 use ficon::Ficon;
 use human_panic::setup_panic;
 use ignore::Walk;
-use std::io::stdout;
 use std::{io, path::Path};
 use termion::{color, style};
 
@@ -18,6 +17,8 @@ fn main() -> Result<(), ExitFailure> {
 
     let mut ficon = Ficon::new()?;
     let mut all_files_passed = true;
+    let stdout = io::stdout();
+    let mut locked_stdout = stdout.lock();
 
     // skip first entry since it's the root dir and we only care about content inside
     for result in Walk::new(ficon.target_dir()).skip(1) {
@@ -25,7 +26,7 @@ fn main() -> Result<(), ExitFailure> {
         let path = entry.path();
 
         let file_passed = ficon.check(path)?;
-        print_check_result(stdout(), path, entry.depth(), file_passed)?;
+        print_check_result(&mut locked_stdout, path, entry.depth(), file_passed)?;
 
         all_files_passed = all_files_passed && file_passed;
     }

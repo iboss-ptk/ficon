@@ -3,12 +3,13 @@ extern crate serde_derive;
 extern crate regex;
 extern crate structopt;
 
-use exitfailure::ExitFailure;
-use failure::{Context, ResultExt};
+use failure::{Context, Error, ResultExt};
 use glob::Pattern;
 use regex::Regex;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -44,7 +45,7 @@ pub struct Ficon {
 impl Ficon {
     const DEFAULT_CONFIG_FILE: &'static str = "Ficon.toml";
 
-    pub fn new() -> Result<Ficon, ExitFailure> {
+    pub fn new() -> Result<Ficon, Error> {
         let option: CliOption = CliOption::from_args();
 
         let config_path = if option.path.is_dir() {
@@ -73,7 +74,7 @@ impl Ficon {
         return self.option.path.as_ref();
     }
 
-    pub fn check(&self, path: &Path) -> Result<bool, ExitFailure> {
+    pub fn check(&self, path: &Path) -> Result<bool, Error> {
         let convention_str = self.config.convention_for(path);
         let reg_pattern = Regex::new(r"/(.*)/").unwrap();
 
@@ -124,7 +125,7 @@ impl Config {
             Some(pattern_configs) => pattern_configs
                 .iter()
                 .filter(|conf| {
-                    Pattern::new(conf.pattern.as_str())
+                    Pattern::new(&conf.pattern)
                         .expect("invalid glob pattern")
                         .matches_path(path)
                 })

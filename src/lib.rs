@@ -94,7 +94,7 @@ impl Ficon {
     }
 
     pub fn target_dir(&self) -> &Path {
-        return self.option.path.as_ref();
+        &self.option.path
     }
 
     pub fn check(&mut self, path: &Path) -> Result<bool, Error> {
@@ -142,7 +142,7 @@ impl TryFrom<Config> for ValidatedConfig {
 impl ValidatedConfig {
     fn new_regex_for_convention(convention: &str) -> Result<Regex, Error> {
         let reg_pattern = Regex::new(r"/(.*)/").unwrap();
-        let convention_regex = match convention {
+        match convention {
             "any" => Self::convention_from_regex(r".*"),
             "kebab" => Self::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
             "snake" => Self::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
@@ -162,8 +162,7 @@ impl ValidatedConfig {
                     )
                 }
             }
-        };
-        convention_regex
+        }
     }
 
     fn convention_from_regex(pattern: &str) -> Result<Regex, Error> {
@@ -190,7 +189,7 @@ impl ValidatedConfig {
                     .convention_regex
                     .get_or_insert(Self::new_regex_for_convention(&pattern.convention)?))
             }
-            None => return Ok(&self.default_convention),
+            None => Ok(&self.default_convention),
         }
     }
 }

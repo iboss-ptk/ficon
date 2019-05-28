@@ -2,6 +2,8 @@
 extern crate serde_derive;
 extern crate regex;
 extern crate structopt;
+#[macro_use]
+extern crate failure;
 
 use failure::{Context, Error, ResultExt};
 use glob::Pattern;
@@ -96,28 +98,7 @@ impl Ficon {
 
     pub fn check(&self, path: &Path) -> Result<bool, Error> {
         let convention_str = self.validated_config.convention_for(path);
-        let reg_pattern = Regex::new(r"/(.*)/").unwrap();
-
-        let convention_regex = match convention_str {
-            "any" => Ficon::convention_from_regex(r".*"),
-            "kebab" => Ficon::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
-            "snake" => Ficon::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
-            "upper_snake" => Ficon::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
-            "camel" => Ficon::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
-            "pascal" => Ficon::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
-            convention => {
-                if reg_pattern.is_match(convention_str) {
-                    let convention = reg_pattern.replace(convention, "$1").to_string();
-                    Regex::new(convention.as_str())
-                        .with_context(|_| format!("{} is not a valid regexp", convention))
-                } else {
-                    Err(Context::new(format!(
-                        "convention is not predefined or defined as regexp: {}",
-                        convention
-                    )))
-                }
-            }
-        };
+        let convention_regex = Ficon::regex_for_convention(convention_str);
 
         let file_name = path
             .file_stem()
@@ -134,8 +115,36 @@ impl Ficon {
         Ok(convention.is_match(file_name))
     }
 
-    fn convention_from_regex(pattern: &str) -> Result<Regex, Context<String>> {
-        Regex::new(pattern).with_context(|_| format!("Invalid convention definition: {}", pattern))
+    fn regex_for_convention(convention_str: &str) -> Result<Regex, Error> {
+        let reg_pattern = Regex::new(r"/(.*)/").unwrap();
+        let convention_regex = match convention_str {
+            "any" => Ficon::convention_from_regex(r".*"),
+            "kebab" => Ficon::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
+            "snake" => Ficon::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
+            "upper_snake" => Ficon::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
+            "camel" => Ficon::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
+            "pascal" => Ficon::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
+            convention => {
+                if reg_pattern.is_match(convention_str) {
+                    let convention = reg_pattern.replace(convention, "$1").to_string();
+                    Regex::new(convention.as_str())
+                        .with_context(|_| format!("{} is not a valid regexp", convention))
+                        .map_err(Into::into)
+                } else {
+                    bail!(
+                        "convention is not predefined or defined as regexp: {}",
+                        convention
+                    )
+                }
+            }
+        };
+        convention_regex
+    }
+
+    fn convention_from_regex(pattern: &str) -> Result<Regex, Error> {
+        Regex::new(pattern)
+            .with_context(|_| format!("Invalid convention definition: {}", pattern))
+            .map_err(Into::into)
     }
 }
 

@@ -149,14 +149,20 @@ impl TryFrom<Config> for ValidatedConfig {
 }
 
 impl ValidatedConfig {
+    fn new_regex(pattern: &str) -> Result<Regex, Error> {
+        Regex::new(pattern)
+            .with_context(|_| format!("Invalid convention definition: {}", pattern))
+            .map_err(Into::into)
+    }
+
     fn new_regex_for_convention(convention: &str) -> Result<Regex, Error> {
         match convention {
-            "any" => Self::convention_from_regex(r".*"),
-            "kebab" => Self::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
-            "snake" => Self::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
-            "upper_snake" => Self::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
-            "camel" => Self::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
-            "pascal" => Self::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
+            "any" => Self::new_regex(r".*"),
+            "kebab" => Self::new_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
+            "snake" => Self::new_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
+            "upper_snake" => Self::new_regex(r"^[A-Z][A-Z_\d]*$"),
+            "camel" => Self::new_regex(r"^[a-z][A-Za-z\d]*$"),
+            "pascal" => Self::new_regex(r"^[A-Z][A-Za-z\d]*$"),
             convention => {
                 if REGEX_PATTERN.is_match(convention) {
                     let convention = REGEX_PATTERN.replace(convention, "$1");
@@ -173,12 +179,6 @@ impl ValidatedConfig {
         }
     }
 
-    fn convention_from_regex(pattern: &str) -> Result<Regex, Error> {
-        Regex::new(pattern)
-            .with_context(|_| format!("Invalid convention definition: {}", pattern))
-            .map_err(Into::into)
-    }
-
     fn convention_for(&mut self, path: &Path) -> Result<&Regex, Error> {
         match self
             .patterns
@@ -189,7 +189,7 @@ impl ValidatedConfig {
                 let convention = &pattern.convention;
                 Ok(get_or_insert_with_error(
                     &mut pattern.convention_regex,
-                    || Self::convention_from_regex(convention),
+                    || Self::new_regex(convention),
                 )?)
             }
             None => Ok(&self.default_convention),
@@ -199,14 +199,14 @@ impl ValidatedConfig {
 
 /// Like Option::get_or_insert_with(), but supports errors
 fn get_or_insert_with_error<T, E>(
-    pattern: &mut Option<T>,
+    input: &mut Option<T>,
     f: impl FnOnce() -> Result<T, E>,
 ) -> Result<&T, E> {
-    Ok(match pattern {
-        Some(ref regex) => regex,
+    Ok(match input {
+        Some(ref v) => v,
         None => {
-            *pattern = Some(f()?);
-            match pattern {
+            *input = Some(f()?);
+            match input {
                 Some(ref v) => v,
                 None => unreachable!(),
             }

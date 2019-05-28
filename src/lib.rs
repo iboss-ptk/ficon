@@ -4,6 +4,12 @@ extern crate regex;
 extern crate structopt;
 #[macro_use]
 extern crate failure;
+#[macro_use]
+extern crate lazy_static;
+
+lazy_static! {
+    static ref REGEX_PATTERN: Regex = Regex::new(r"/(.*)/").unwrap();
+}
 
 use failure::{Context, Error, ResultExt};
 use glob::Pattern;
@@ -144,7 +150,6 @@ impl TryFrom<Config> for ValidatedConfig {
 
 impl ValidatedConfig {
     fn new_regex_for_convention(convention: &str) -> Result<Regex, Error> {
-        let reg_pattern = Regex::new(r"/(.*)/").unwrap();
         match convention {
             "any" => Self::convention_from_regex(r".*"),
             "kebab" => Self::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
@@ -153,8 +158,8 @@ impl ValidatedConfig {
             "camel" => Self::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
             "pascal" => Self::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
             convention => {
-                if reg_pattern.is_match(convention) {
-                    let convention = reg_pattern.replace(convention, "$1");
+                if REGEX_PATTERN.is_match(convention) {
+                    let convention = REGEX_PATTERN.replace(convention, "$1");
                     Regex::new(&convention)
                         .with_context(|_| format!("{} is not a valid regexp", convention))
                         .map_err(Into::into)

@@ -53,7 +53,7 @@ struct ValidatedSubConfig {
 
 struct ValidatedConfig {
     default_convention: Regex,
-    for_patterns: Vec<ValidatedSubConfig>,
+    patterns: Vec<ValidatedSubConfig>,
 }
 
 impl Ficon {
@@ -103,18 +103,19 @@ impl Ficon {
             .file_stem()
             .expect("file stem is missing")
             .to_str()
-            .expect("can't cast file stem to string");
-
-        // ignore multiple extension by default
-        // TODO: make this configurable
-        let file_name = file_name.split(".").next().unwrap_or("");
+            .expect("can't cast file stem to string")
+            // ignore multiple extension by default
+            // TODO: make this configurable
+            .split('.')
+            .next()
+            .unwrap_or("");
 
         Ok(convention_regex.is_match(file_name))
     }
 
-    fn regex_for_convention(convention_str: &str) -> Result<Regex, Error> {
+    fn regex_for_convention(convention: &str) -> Result<Regex, Error> {
         let reg_pattern = Regex::new(r"/(.*)/").unwrap();
-        let convention_regex = match convention_str {
+        let convention_regex = match convention {
             "any" => Ficon::convention_from_regex(r".*"),
             "kebab" => Ficon::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
             "snake" => Ficon::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
@@ -122,7 +123,7 @@ impl Ficon {
             "camel" => Ficon::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
             "pascal" => Ficon::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
             convention => {
-                if reg_pattern.is_match(convention_str) {
+                if reg_pattern.is_match(convention) {
                     let convention = reg_pattern.replace(convention, "$1").to_string();
                     Regex::new(convention.as_str())
                         .with_context(|_| format!("{} is not a valid regexp", convention))
@@ -151,7 +152,7 @@ impl TryFrom<Config> for ValidatedConfig {
     fn try_from(value: Config) -> Result<ValidatedConfig, Error> {
         Ok(ValidatedConfig {
             default_convention: Ficon::regex_for_convention(&value.default.convention)?,
-            for_patterns: match value.for_patterns {
+            patterns: match value.for_patterns {
                 Some(mut pattern_configs) => pattern_configs
                     .drain(..)
                     .map(|conf| {
@@ -173,7 +174,7 @@ impl TryFrom<Config> for ValidatedConfig {
 impl ValidatedConfig {
     fn convention_for(&mut self, path: &Path) -> Result<&Regex, Error> {
         match self
-            .for_patterns
+            .patterns
             .iter_mut()
             .filter(|p| p.pattern.matches_path(path))
             .next()

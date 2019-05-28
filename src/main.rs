@@ -16,19 +16,20 @@ fn main() -> Result<(), ExitFailure> {
     setup_panic!();
 
     let mut ficon = Ficon::new()?;
-    let mut ok = true;
+    let mut all_files_passed = true;
 
     // skip first entry since it's the root dir and we only care about content inside
     for result in Walk::new(ficon.target_dir()).skip(1) {
         let entry = result.with_context(|_| format!("can't retrieve directory entry"))?;
         let path = entry.path();
 
-        let is_passed = ficon.check(path)?;
-        ok = ok && is_passed;
-        print_check_result(path, entry.depth(), is_passed);
+        let file_passed = ficon.check(path)?;
+        print_check_result(path, entry.depth(), file_passed);
+
+        all_files_passed = all_files_passed && file_passed;
     }
 
-    if !ok {
+    if !all_files_passed {
         std::process::exit(exitcode::DATAERR)
     }
 

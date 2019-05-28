@@ -66,7 +66,7 @@ impl Ficon {
             Ok(format!(
                 "{}/{}",
                 option.path.display(),
-                Ficon::DEFAULT_CONFIG_FILE
+                Self::DEFAULT_CONFIG_FILE
             ))
         } else {
             Err(Context::new(format!(
@@ -112,38 +112,6 @@ impl Ficon {
 
         Ok(convention_regex.is_match(file_name))
     }
-
-    fn regex_for_convention(convention: &str) -> Result<Regex, Error> {
-        let reg_pattern = Regex::new(r"/(.*)/").unwrap();
-        let convention_regex = match convention {
-            "any" => Ficon::convention_from_regex(r".*"),
-            "kebab" => Ficon::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
-            "snake" => Ficon::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
-            "upper_snake" => Ficon::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
-            "camel" => Ficon::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
-            "pascal" => Ficon::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
-            convention => {
-                if reg_pattern.is_match(convention) {
-                    let convention = reg_pattern.replace(convention, "$1").to_string();
-                    Regex::new(convention.as_str())
-                        .with_context(|_| format!("{} is not a valid regexp", convention))
-                        .map_err(Into::into)
-                } else {
-                    bail!(
-                        "convention is not predefined or defined as regexp: {}",
-                        convention
-                    )
-                }
-            }
-        };
-        convention_regex
-    }
-
-    fn convention_from_regex(pattern: &str) -> Result<Regex, Error> {
-        Regex::new(pattern)
-            .with_context(|_| format!("Invalid convention definition: {}", pattern))
-            .map_err(Into::into)
-    }
 }
 
 impl TryFrom<Config> for ValidatedConfig {
@@ -151,7 +119,7 @@ impl TryFrom<Config> for ValidatedConfig {
 
     fn try_from(value: Config) -> Result<ValidatedConfig, Error> {
         Ok(ValidatedConfig {
-            default_convention: Ficon::regex_for_convention(&value.default.convention)?,
+            default_convention: Self::new_regex_for_convention(&value.default.convention)?,
             patterns: match value.for_patterns {
                 Some(mut pattern_configs) => pattern_configs
                     .drain(..)
@@ -172,6 +140,38 @@ impl TryFrom<Config> for ValidatedConfig {
 }
 
 impl ValidatedConfig {
+    fn new_regex_for_convention(convention: &str) -> Result<Regex, Error> {
+        let reg_pattern = Regex::new(r"/(.*)/").unwrap();
+        let convention_regex = match convention {
+            "any" => Self::convention_from_regex(r".*"),
+            "kebab" => Self::convention_from_regex(r"^[a-z][a-z\-\d]*[a-z\d]$"),
+            "snake" => Self::convention_from_regex(r"^[a-z][a-z_\d]*[a-z\d]$"),
+            "upper_snake" => Self::convention_from_regex(r"^[A-Z][A-Z_\d]*$"),
+            "camel" => Self::convention_from_regex(r"^[a-z][A-Za-z\d]*$"),
+            "pascal" => Self::convention_from_regex(r"^[A-Z][A-Za-z\d]*$"),
+            convention => {
+                if reg_pattern.is_match(convention) {
+                    let convention = reg_pattern.replace(convention, "$1");
+                    Regex::new(&convention)
+                        .with_context(|_| format!("{} is not a valid regexp", convention))
+                        .map_err(Into::into)
+                } else {
+                    bail!(
+                        "convention is not predefined or defined as regexp: {}",
+                        convention
+                    )
+                }
+            }
+        };
+        convention_regex
+    }
+
+    fn convention_from_regex(pattern: &str) -> Result<Regex, Error> {
+        Regex::new(pattern)
+            .with_context(|_| format!("Invalid convention definition: {}", pattern))
+            .map_err(Into::into)
+    }
+
     fn convention_for(&mut self, path: &Path) -> Result<&Regex, Error> {
         match self
             .patterns
@@ -189,7 +189,7 @@ impl ValidatedConfig {
 
                 Ok(pattern
                     .convention_regex
-                    .get_or_insert(Ficon::regex_for_convention(&pattern.convention)?))
+                    .get_or_insert(Self::new_regex_for_convention(&pattern.convention)?))
             }
             None => return Ok(&self.default_convention),
         }

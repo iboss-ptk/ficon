@@ -185,13 +185,19 @@ impl ValidatedConfig {
             .iter_mut()
             .find(|p| p.pattern.matches_path(path))
         {
-            Some(pattern) => Ok(match pattern.convention_regex {
-                Some(ref regex) => regex,
-                None => pattern
-                    .convention_regex
-                    .get_or_insert(Self::new_regex_for_convention(&pattern.convention)?),
-            }),
+            Some(pattern) => Ok(get_or_insert_with_error(pattern)?),
             None => Ok(&self.default_convention),
         }
     }
+}
+
+fn get_or_insert_with_error(pattern: &mut ValidatedSubConfig) -> Result<&Regex, Error> {
+    Ok(match pattern.convention_regex {
+        Some(ref regex) => regex,
+        None => pattern
+            .convention_regex
+            .get_or_insert(ValidatedConfig::new_regex_for_convention(
+                &pattern.convention,
+            )?),
+    })
 }

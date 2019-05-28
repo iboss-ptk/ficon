@@ -176,8 +176,7 @@ impl ValidatedConfig {
         match self
             .patterns
             .iter_mut()
-            .filter(|p| p.pattern.matches_path(path))
-            .next()
+            .find(|p| p.pattern.matches_path(path))
         {
             Some(pattern) => {
                 // This is to pacify the borrow checker - I would have hoped '.as_ref()' can be used

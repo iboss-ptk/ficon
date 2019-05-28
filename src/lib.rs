@@ -6,6 +6,7 @@ extern crate structopt;
 use failure::{Context, Error, ResultExt};
 use glob::Pattern;
 use regex::Regex;
+use std::convert::{TryFrom, TryInto};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -39,7 +40,17 @@ struct SubConfigByPattern {
 
 pub struct Ficon {
     option: CliOption,
-    config: Config,
+    validated_config: ValidatedConfig,
+}
+
+struct ValidatedSubConfig {
+    pattern: Pattern,
+    convention: String,
+}
+
+struct ValidatedConfig {
+    default_convention: String,
+    for_patterns: Vec<ValidatedSubConfig>,
 }
 
 impl Ficon {
@@ -62,12 +73,21 @@ impl Ficon {
         }?;
 
         let config = fs::read_to_string(&config_path)
-            .with_context(|_| format!("Config file is missing: {}", &config_path))?;
+            .with_context(|_| format!("Config file is missing: '{}'", &config_path))?;
 
-        let config: Config =
-            toml::from_str(&config).with_context(|_| "Error while parsing configuration file")?;
+        let config: Config = toml::from_str(&config).with_context(|_| {
+            format!(
+                "Error while parsing configuration file at '{}'",
+                config_path
+            )
+        })?;
 
-        Ok(Ficon { option, config })
+        Ok(Ficon {
+            option,
+            validated_config: <_ as TryInto<ValidatedConfig>>::try_into(config).with_context(
+                |_| format!("Validation of configuration at '{}' failed", config_path),
+            )?,
+        })
     }
 
     pub fn target_dir(&self) -> &Path {
@@ -75,7 +95,7 @@ impl Ficon {
     }
 
     pub fn check(&self, path: &Path) -> Result<bool, Error> {
-        let convention_str = self.config.convention_for(path);
+        let convention_str = self.validated_config.convention_for(path);
         let reg_pattern = Regex::new(r"/(.*)/").unwrap();
 
         let convention_regex = match convention_str.as_str() {
@@ -119,20 +139,37 @@ impl Ficon {
     }
 }
 
-impl Config {
+impl TryFrom<Config> for ValidatedConfig {
+    type Error = Error;
+
+    fn try_from(value: Config) -> Result<ValidatedConfig, Error> {
+        Ok(ValidatedConfig {
+            default_convention: value.default.convention,
+            for_patterns: match value.for_patterns {
+                Some(mut pattern_configs) => pattern_configs
+                    .drain(..)
+                    .map(|conf| {
+                        Pattern::new(&conf.pattern)
+                            .with_context(|_| format!("Failed to parse pattern '{}'", conf.pattern))
+                            .map(|pattern| ValidatedSubConfig {
+                                convention: conf.convention,
+                                pattern,
+                            })
+                    })
+                    .collect::<Result<_, _>>()?,
+                None => Vec::default(),
+            },
+        })
+    }
+}
+
+impl ValidatedConfig {
     fn convention_for(&self, path: &Path) -> String {
-        match self.for_patterns.as_ref() {
-            Some(pattern_configs) => pattern_configs
-                .iter()
-                .filter(|conf| {
-                    Pattern::new(&conf.pattern)
-                        .expect("invalid glob pattern")
-                        .matches_path(path)
-                })
-                .next()
-                .map(|e| e.convention.clone())
-                .unwrap_or(self.default.convention.clone()),
-            None => self.default.convention.clone(),
-        }
+        self.for_patterns
+            .iter()
+            .filter(|p| p.pattern.matches_path(path))
+            .next()
+            .map(|p| p.convention.clone())
+            .unwrap_or_else(|| self.default_convention.clone())
     }
 }

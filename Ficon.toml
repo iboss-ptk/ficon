@@ -20,3 +20,7 @@ convention = "pascal"
 [[for_patterns]]
 pattern = "./Dockerfile*"
 convention = "pascal"
+
+[[for_patterns]]
+pattern = "**/__*__/"
+convention = "/^(/"

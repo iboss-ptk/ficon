@@ -189,13 +189,12 @@ impl ValidatedConfig {
                 // This is to pacify the borrow checker - I would have hoped '.as_ref()' can be used
                 // and NLL sorts this out. Apparently not if Options are involved.
                 // Problem: We want to optionally update our cache, otherwise return it
-                if let Some(regex) = pattern.convention_regex.take() {
-                    return Ok(pattern.convention_regex.get_or_insert(regex));
-                }
-
-                Ok(pattern
-                    .convention_regex
-                    .get_or_insert(Self::new_regex_for_convention(&pattern.convention)?))
+                Ok(match pattern.convention_regex.take() {
+                    Some(regex) => pattern.convention_regex.get_or_insert(regex),
+                    None => pattern
+                        .convention_regex
+                        .get_or_insert(Self::new_regex_for_convention(&pattern.convention)?),
+                })
             }
             None => Ok(&self.default_convention),
         }

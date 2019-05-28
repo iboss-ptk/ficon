@@ -185,19 +185,31 @@ impl ValidatedConfig {
             .iter_mut()
             .find(|p| p.pattern.matches_path(path))
         {
-            Some(pattern) => Ok(get_or_insert_with_error(pattern)?),
+            Some(pattern) => {
+                let convention = &pattern.convention;
+                Ok(get_or_insert_with_error(
+                    &mut pattern.convention_regex,
+                    || Self::convention_from_regex(convention),
+                )?)
+            }
             None => Ok(&self.default_convention),
         }
     }
 }
 
-fn get_or_insert_with_error(pattern: &mut ValidatedSubConfig) -> Result<&Regex, Error> {
-    Ok(match pattern.convention_regex {
+/// Like Option::get_or_insert_with(), but supports errors
+fn get_or_insert_with_error<T, E>(
+    pattern: &mut Option<T>,
+    f: impl FnOnce() -> Result<T, E>,
+) -> Result<&T, E> {
+    Ok(match pattern {
         Some(ref regex) => regex,
-        None => pattern
-            .convention_regex
-            .get_or_insert(ValidatedConfig::new_regex_for_convention(
-                &pattern.convention,
-            )?),
+        None => {
+            *pattern = Some(f()?);
+            match pattern {
+                Some(ref v) => v,
+                None => unreachable!(),
+            }
+        }
     })
 }

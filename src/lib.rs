@@ -189,7 +189,7 @@ impl ValidatedConfig {
                 let convention = &pattern.convention;
                 Ok(get_or_insert_with_error(
                     &mut pattern.convention_regex,
-                    || Self::new_regex(convention),
+                    || Self::new_regex_for_convention(convention),
                 )?)
             }
             None => Ok(&self.default_convention),

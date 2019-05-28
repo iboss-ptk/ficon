@@ -15,7 +15,7 @@ use termion::{color, style};
 fn main() -> Result<(), ExitFailure> {
     setup_panic!();
 
-    let ficon = Ficon::new()?;
+    let mut ficon = Ficon::new()?;
     let mut ok = true;
 
     // skip first entry since it's the root dir and we only care about content inside

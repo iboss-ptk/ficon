@@ -48,10 +48,11 @@ pub struct Ficon {
 struct ValidatedSubConfig {
     pattern: Pattern,
     convention: String,
+    convention_regex: Option<Regex>,
 }
 
 struct ValidatedConfig {
-    default_convention: String,
+    default_convention: Regex,
     for_patterns: Vec<ValidatedSubConfig>,
 }
 
@@ -96,10 +97,8 @@ impl Ficon {
         return self.option.path.as_ref();
     }
 
-    pub fn check(&self, path: &Path) -> Result<bool, Error> {
-        let convention_str = self.validated_config.convention_for(path);
-        let convention_regex = Ficon::regex_for_convention(convention_str);
-
+    pub fn check(&mut self, path: &Path) -> Result<bool, Error> {
+        let convention_regex = self.validated_config.convention_for(path)?;
         let file_name = path
             .file_stem()
             .expect("file stem is missing")
@@ -110,9 +109,7 @@ impl Ficon {
         // TODO: make this configurable
         let file_name = file_name.split(".").next().unwrap_or("");
 
-        let convention = convention_regex.with_context(|_| "fail to parse convention")?;
-
-        Ok(convention.is_match(file_name))
+        Ok(convention_regex.is_match(file_name))
     }
 
     fn regex_for_convention(convention_str: &str) -> Result<Regex, Error> {
@@ -153,7 +150,7 @@ impl TryFrom<Config> for ValidatedConfig {
 
     fn try_from(value: Config) -> Result<ValidatedConfig, Error> {
         Ok(ValidatedConfig {
-            default_convention: value.default.convention,
+            default_convention: Ficon::regex_for_convention(&value.default.convention)?,
             for_patterns: match value.for_patterns {
                 Some(mut pattern_configs) => pattern_configs
                     .drain(..)
@@ -162,6 +159,7 @@ impl TryFrom<Config> for ValidatedConfig {
                             .with_context(|_| format!("Failed to parse pattern '{}'", conf.pattern))
                             .map(|pattern| ValidatedSubConfig {
                                 convention: conf.convention,
+                                convention_regex: None,
                                 pattern,
                             })
                     })
@@ -173,12 +171,26 @@ impl TryFrom<Config> for ValidatedConfig {
 }
 
 impl ValidatedConfig {
-    fn convention_for(&self, path: &Path) -> &str {
-        self.for_patterns
-            .iter()
+    fn convention_for(&mut self, path: &Path) -> Result<&Regex, Error> {
+        match self
+            .for_patterns
+            .iter_mut()
             .filter(|p| p.pattern.matches_path(path))
             .next()
-            .map(|p| &p.convention)
-            .unwrap_or_else(|| &self.default_convention)
+        {
+            Some(pattern) => {
+                // This is to pacify the borrow checker - I would have hoped '.as_ref()' can be used
+                // and NLL sorts this out. Apparently not if Options are involved.
+                // Problem: We want to optionally update our cache, otherwise return it
+                if let Some(regex) = pattern.convention_regex.take() {
+                    return Ok(pattern.convention_regex.get_or_insert(regex));
+                }
+
+                Ok(pattern
+                    .convention_regex
+                    .get_or_insert(Ficon::regex_for_convention(&pattern.convention)?))
+            }
+            None => return Ok(&self.default_convention),
+        }
     }
 }

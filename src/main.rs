@@ -9,7 +9,8 @@ use failure::ResultExt;
 use ficon::Ficon;
 use human_panic::setup_panic;
 use ignore::Walk;
-use std::path::Path;
+use std::io::stdout;
+use std::{io, path::Path};
 use termion::{color, style};
 
 fn main() -> Result<(), ExitFailure> {
@@ -24,7 +25,7 @@ fn main() -> Result<(), ExitFailure> {
         let path = entry.path();
 
         let file_passed = ficon.check(path)?;
-        print_check_result(path, entry.depth(), file_passed);
+        print_check_result(stdout(), path, entry.depth(), file_passed)?;
 
         all_files_passed = all_files_passed && file_passed;
     }
@@ -36,7 +37,12 @@ fn main() -> Result<(), ExitFailure> {
     Ok(())
 }
 
-fn print_check_result(path: &Path, depth: usize, is_passed: bool) {
+fn print_check_result(
+    mut out: impl io::Write,
+    path: &Path,
+    depth: usize,
+    is_passed: bool,
+) -> Result<(), io::Error> {
     let depth_space = "  ".repeat(depth);
     let file_name = path
         .file_name()
@@ -45,19 +51,22 @@ fn print_check_result(path: &Path, depth: usize, is_passed: bool) {
         .expect("filename can't be casted to string");
 
     if is_passed {
-        println!(
+        writeln!(
+            out,
             "{green}{path}{reset}",
             path = format!("{}✓ {}", depth_space, file_name),
             green = color::Fg(color::LightGreen),
             reset = style::Reset
-        );
+        )?;
     } else {
-        println!(
+        writeln!(
+            out,
             "{bold}{red}{path}{reset}",
             path = format!("{}✘ {}", depth_space, file_name),
             red = color::Fg(color::LightRed),
             bold = style::Bold,
             reset = style::Reset
-        );
+        )?;
     };
+    Ok(())
 }
